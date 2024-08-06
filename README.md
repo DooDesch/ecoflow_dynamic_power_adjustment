@@ -67,7 +67,7 @@ Error Handling: While the script includes error handling, further refinement may
 This service script provides a convenient way to integrate EcoFlow device control within Home Assistant, enabling users to manage power streams and monitor device status seamlessly.
 
 # Debuging
-You can enable debugging for pyscript in your automation.yaml like this:
+You can enable debugging for pyscript in your configuration.yaml like this:
 ```
 logger:
   default: info
