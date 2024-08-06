@@ -51,6 +51,8 @@ data:
   SerialNumber: Your Serial Nr.
   TotalPower: "{{ states('sensor.your sensor') | round }}"
   Automation: true
+  AddCurrentWatts: false # Default false, optional
+  MaxWatts: 600 # Default 600, optional
 ```
 
 # Dependencies

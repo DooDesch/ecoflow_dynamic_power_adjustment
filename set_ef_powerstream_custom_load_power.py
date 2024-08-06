@@ -98,9 +98,9 @@ def check_if_device_is_online(SN=None,payload=None):
         return "devices not found"
 
 @service
-def set_ef_powerstream_custom_load_power(SerialNumber=None,TotalPower=None,Automation=False):
+def set_ef_powerstream_custom_load_power(SerialNumber=None,TotalPower=None,Automation=False,AddCurrentWatts=False,MaxWatts=600):
 
-    log.info(f"set_ef_powerstream_custom_load_power: got SerialNumber {SerialNumber} TotalPower {TotalPower} Automation {Automation}")
+    log.info(f"set_ef_powerstream_custom_load_power: got SerialNumber {SerialNumber} TotalPower {TotalPower} Automation {Automation} AddCurrentWatts {AddCurrentWatts} MaxWatts {MaxWatts}")
 
     if SerialNumber is None:
         log.info(f"SerialNumber is not provided. Exiting function.")
@@ -108,7 +108,7 @@ def set_ef_powerstream_custom_load_power(SerialNumber=None,TotalPower=None,Autom
         return  # Exit the function if SerialNumber is None
 
     url = 'https://api.ecoflow.com/iot-open/sign/device/quota'
-    url_device = 'https://api.ecoflow.com/iot-open/sign/device/list'
+    urlDevice = 'https://api.ecoflow.com/iot-open/sign/device/list'
 
     # Replace with valid access/secret keys and device SN
     key = 'example123'
@@ -116,45 +116,46 @@ def set_ef_powerstream_custom_load_power(SerialNumber=None,TotalPower=None,Autom
 
     
     cmdCode = 'WN511_SET_PERMANENT_WATTS_PACK'
-    TotalPowerOffSet = 0
+    totalPowerOffSet = 0
 
     # collect status of the devices
-    payload = get_api(url_device,key,secret,{"sn":SerialNumber})
+    payload = get_api(urlDevice,key,secret,{"sn":SerialNumber})
 
     check_ps_status = check_if_device_is_online(SerialNumber,payload)
 
 
     # collect current permanentWatts
-    quotas = ["20_1.permanentWatts"]
-    params  = {"quotas":quotas}
+    curPermanentWatts = 0
+    if AddCurrentWatts:
+        quotas = ["20_1.permanentWatts"]
+        params  = {"quotas":quotas}
 
-    payload = post_api(url,key,secret,{"sn":SerialNumber,"params":params})
-    if payload.status_code == 200:
-        try:
-            cur_permanentWatts = round(payload.json()['data']['20_1.permanentWatts'] / 10)
-        except KeyError as e:
-            log.info(f"Error accessing data in payload:", e)
-            return  # Exit the function or handle the error appropriately
-    else:
-        cur_permanentWatts = 0
-        return 4, "Integration was not able to collect the current permanentWatts from EcoFlow SP!"
+        payload = post_api(url,key,secret,{"sn":SerialNumber,"params":params})
+        if payload.status_code == 200:
+            try:
+                curPermanentWatts = round(payload.json()['data']['20_1.permanentWatts'] / 10)
+            except KeyError as e:
+                log.info(f"Error accessing data in payload:", e)
+                return  # Exit the function or handle the error appropriately
+        else:
+            return 4, "Integration was not able to collect the current permanentWatts from EcoFlow SP!"
 
-    CalPermanentWatts = cur_permanentWatts + TotalPower - TotalPowerOffSet
+    sumPermanentWatts = curPermanentWatts + TotalPower - totalPowerOffSet
 
     try:
-        # allow only value between 0-600
-        if 0 <= CalPermanentWatts <= 600:
-            NewPermanentWatts = CalPermanentWatts * 10
+        # allow only value between 0-MaxWatts
+        if 0 < sumPermanentWatts < MaxWatts:
+            permanentWatts = sumPermanentWatts * 10
         else:
-            NewPermanentWatts= 0
+            permanentWatts= 0
 
-        if CalPermanentWatts > 600:
-            NewPermanentWatts = 600 * 10
+        if sumPermanentWatts >= MaxWatts:
+            permanentWatts = MaxWatts * 10
 
         if not Automation:
-            NewPermanentWatts= 0
+            permanentWatts= 0
 
-        params = {"permanentWatts":NewPermanentWatts}
+        params = {"permanentWatts":permanentWatts}
 
         
         payload = put_api(url,key,secret,{"sn":SerialNumber,"cmdCode":cmdCode,"params":params})
