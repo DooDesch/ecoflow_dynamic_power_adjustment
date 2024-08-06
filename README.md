@@ -55,6 +55,29 @@ data:
   MaxWatts: 600 # Default 600, optional
 ```
 
+## Sample automation in yaml:
+```
+alias: Set EcoFlow TotalPower Inverting
+description: ""
+trigger:
+  - platform: time_pattern
+    seconds: /5 # Every 5 seconds
+condition: []
+action:
+  - service: pyscript.set_ef_powerstream_custom_load_power
+    data:
+      SerialNumber: YOUR_SERIAL_NUMBER
+      TotalPower: |-
+        {{  (
+          states('sensor.first') | float +
+          states('sensor.second') | float +
+          states('sensor.third') | float +
+          100 # Optional base power usage
+        ) | round(2) }}
+      Automation: true
+mode: single
+```
+
 # Dependencies
 Python Libraries: Utilizes standard Python libraries such as requests, hashlib, hmac, random, time, binascii, and json for handling API requests, authentication, and data manipulation.
 Configuration
